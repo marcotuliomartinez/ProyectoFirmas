@@ -1,0 +1,417 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+class Menu {
+    
+    static MetodosCesar cs = new MetodosCesar();//realiza una instancia a la clase MetodosCesar
+    static MetodosDiceware d = new MetodosDiceware();//realiza una instancia a la clase MetodosDiceware
+    
+    public static void main(String[] args) {
+
+        try{
+            if(args.length==0){
+		System.out.println("");//se muestra el menu del programa
+                System.out.println("--------------MENU--------------");
+                System.out.println("");
+                System.out.println("Sintaxis: java Menu <algoritmo> <opcion>");
+                System.out.println("");
+                System.out.println("<algoritmo>: ");
+                System.out.println("  -cs: Cesar");
+                System.out.println("  -d:  Diceware");
+                System.out.println("");
+                System.out.println("<opcion>:");
+                System.out.println("  -o:  Para consultar las opciones del algoritmo seleccionado");
+                System.out.println("");
+                System.out.println("Sintaxis de ayuda(Ejemplos): ");
+                System.out.println("  java Menu -cs -o  Para consultar las opciones de Cesar");
+                System.out.println("  java Menu -d -o   Para consultar las opciones de Diceware");
+                System.out.println("");
+            }else {
+                //se validan los argumentos digitados por el usuario en consola para usar Cesar o Diceware
+                if(args[0].equals("-cs")){//se valida si es cesar
+                    if(args.length==2&&args[1].equals("-o")){
+                        cs.cesarMensaje();
+                    }else{
+                        if(args[1].equals("-c") && args.length==4){
+                            cs.cifrarCesar(cs.LeerArchivoTxt(args[2]), cs.nombreArchivo(args[2]), cs.calculoDesplazamiento(args[3]));
+                        }else if(args[1].equals("-d") && args.length==4){
+                            cs.descifrarCesar(cs.LeerArchivoTxt(args[2]), cs.nombreArchivo(args[2]), cs.calculoDesplazamiento(args[3]));
+                        }
+                    }
+                }else if(args[0].equals("-d")){//se valida si es Diceware
+		    	if(args.length==2&&args[1].equals("-o")){
+				d.dicewareMensaje();
+                        }else if(args.length==3 && args[1].equals("-a")){
+                                d.dicewareAutomatico(args[2]);
+			}else if(args.length==8 && args[1].equals("-m")){
+				d.dicewareManual(args[2], args[3], args[4], args[5], args[6], args[7]);
+			}
+
+                }
+            }                        
+        }catch(Exception e){}
+    }
+    
+}
+
+class MetodosCesar {
+    
+    public String LeerArchivoTxt (String archivo){ ////Inicia metodo donde se realiza la lectura del archivo TXT a procesar
+        
+        String bfRead="", texto="";
+        
+        try {
+            //se lee el archivo con base a ISO-8859-1 que es el alfabeto latinoamericano
+            BufferedReader bf = new BufferedReader (new InputStreamReader(new FileInputStream(archivo), "ISO-8859-1"));
+            
+            while ((bfRead = bf.readLine())!=null){//se ejecuta hasta leer todo el archivo
+                texto=bfRead;//se guarda el contenido del txt en una variable String
+            }
+            
+        } catch (Exception e) {//si el archivo no se puede leer se indica un mensaje de error y se finaliza la ejecucion
+            
+            System.err.println("**Error > No se encontro el archivo en la ruta especificada**");
+            System.exit(0);
+        }
+        
+        return texto;
+        
+    }
+    
+    public String nombreArchivo(String ruta){//Inicia metodo donde se obtiene el nombre del archivo TXT que se esta procesando
+        String nom="";
+        File fichero=new File(ruta);
+        
+        int pos=fichero.getName().lastIndexOf(".");//se busca el lugar donde el archivo tiene el "." de la extension
+        
+	if(pos>0){//si el archivo tiene el "." de la extension
+            nom=fichero.getName().substring(0, pos);//se obtiene el nombre del archivo sin su extension
+        }else{
+            nom=fichero.getName();//de lo contrario, se obtiene el nombre del archivo directamente
+        }
+        
+        return nom;
+        
+    }
+
+    public int calculoDesplazamiento(String letra){//Inicia metodo donde se aplica la validacion de la clave para cifrar o descifrar con 							     Cesar
+        
+	String patron="[A-N]", patron2="[O-Z]";
+	int valor=0;
+
+	if(String.valueOf(letra.charAt(0)).matches(patron)){//se valida si la clave es una letra del alfabeto modulo 26
+	    valor=((int)letra.charAt(0)-65);//se obtiene su valor en ASCII y se transforma a un entero. ejemplo: A -> 65 - 65 = 0
+	}else if(String.valueOf(letra.charAt(0)).equals("Ñ")){//si la clave es la letra Ñ se le asigna el valor directamente
+	    valor=14;
+	}else if(String.valueOf(letra.charAt(0)).matches(patron2)){//se valida si la clave es una letra del alfabeto modulo 26
+	    valor=((int)letra.charAt(0)-65+1);//se obtiene su valor en ASCII y se transforma a un entero. ejemplo: O -> 79 - 65 + 1 = 15
+	}else{
+	    System.out.println("**Error > Letra clave no valida**");//si no es valida, se indica el mensaje de error
+	    System.exit(0);
+	}
+	
+	return valor;
+
+    }
+
+    public void cifrarCesar(String claro, String nombreArchivo, int desplazamiento) {//Inicia metodo donde se cifra con Cesar
+        
+        char ch1 [] = claro.toCharArray(); //se guarda los caracteres del TXT leido en un arreglo
+        int formula=0;// se crea una variable para guardar los valores de la operacion matematica
+        
+        String patron="[A-N]", patron2="[O-Z]", alfabeto="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";//
+                
+        for(int i=0; i<ch1.length; i++){//se recorre hasta leer todo el arreglo de caracteres
+	                    
+            if(String.valueOf(ch1[i]).matches(patron)){//se valida si la letra que se procesa se encuentra entre A y N
+                //se realiza la operacion modular donde a partir del valor ASCII de la letra se obtiene la posicion de la letra pero cifrada.
+                formula=((int)ch1[i]-65+desplazamiento)%27;
+                ch1[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }else if(String.valueOf(ch1[i]).matches(patron2)){//se valida si la letra que se procesa se encuentra entre O y Z
+                //se realiza la operacion modular donde a partir del valor ASCII de la letra se obtiene la posicion de la letra pero cifrada.
+                formula=((int)ch1[i]-65+desplazamiento+1)%27;
+                ch1[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }else if(String.valueOf(ch1[i]).equals("Ñ")){//se valida si la letra que se procesa es Ñ
+                formula=(14+desplazamiento)%27;//en este caso se toma la posicion 14 que es Ñ en el alfabeto
+                ch1[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }
+            
+        }        
+        crearTXT(ch1, nombreArchivo+".cif");//se envia el texto cifrado y el nombre del archivo para crear el archivo ".cif"
+        
+    }
+    
+    public void descifrarCesar(String cifrado, String nombreArchivo, int desplazamiento) {//Inicia metodo donde se descifra con Cesar
+                
+        char ch2 [] = cifrado.toCharArray(); 
+        int formula=0;
+        
+        String patron="[A-N]", patron2="[O-Z]", alfabeto="ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";//
+                
+        for(int i=0; i<ch2.length; i++){//se recorre hasta leer todo el arreglo de caracteres
+	                    
+            if(String.valueOf(ch2[i]).matches(patron)){//se valida si la letra que se procesa se encuentra entre A y N
+                //se realiza la operacion modular donde a partir del valor ASCII de la letra se obtiene la posicion de la letra pero cifrada
+                formula=((int)ch2[i]-65-desplazamiento)%27;
+                if(formula<0){//si el valor calculado es negativo se aplica una suma de 27 caracteres
+                    formula=formula+27;
+                }
+                ch2[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }else if(String.valueOf(ch2[i]).matches(patron2)){//se valida si la letra que se procesa se encuentra entre O y Z
+                //se realiza la operacion modular donde a partir del valor ASCII de la letra se obtiene la posicion de la letra pero cifrada
+                formula=((int)ch2[i]-65-desplazamiento+1)%27;
+                if(formula<0){//si el valor calculado es negativo se aplica una suma de 27 caracteres
+                    formula=formula+27;
+                }
+                ch2[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }else if(String.valueOf(ch2[i]).equals("Ñ")){//se valida si la letra que se procesa es Ñ
+                formula=(14-desplazamiento)%27;//en este caso se toma la posicion 14 que es Ñ en el alfabeto
+                if(formula<0){//si el valor calculado es negativo se aplica una suma de 27 caracteres
+                    formula=formula+27;
+                }
+                ch2[i]=(char)(alfabeto.charAt(formula));//se toma el valor de la formula y se ubica en el alfabeto.
+            }
+            
+        }
+        
+        crearTXT(ch2, nombreArchivo+".dec");//se envia el texto descifrado y el nombre del archivo para crear el archivo ".dec"
+        
+    }
+    
+    public void crearTXT(char [] texto, String nombreArchivo){//Inicia metodo donde se crea el archivo .cif o .dec
+                
+        BufferedWriter escribir;
+        
+        try {
+            File file = new File(nombreArchivo);//se recibe el nombre del archivo
+            FileWriter filewrite = new FileWriter(file);//se instancia para escribir en el
+            
+            if(!file.exists()){//si el archivo no existe se crea, de lo contrario se sobreescribe
+                file.createNewFile();
+            }
+            //Para escibir se usa BufferedWritere con base a ISO-8859-1 (alfabeto latinoamericano)
+            escribir = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), "ISO-8859-1"));
+
+            escribir.write(texto);//se escribe en el archivo
+            escribir.flush();//se limpia Buffered
+            escribir.close();//se cierra para guardar el archivo
+            System.out.println("**Info > Proceso finalizado con exito**");
+        } catch (Exception e) {
+            System.out.println("**Error > No fue posible crear el archivo**");
+        }       
+    }
+    
+    public void cesarMensaje(){
+	    //se muestran las opciones del cesar si el usuario lo solicita
+            System.out.println("");
+            System.out.println("OPCIONES DE CIFRADOR CESAR");
+            System.out.println("Sintaxis para cifrar o descifrar un archivo TXT:");
+            System.out.println("----    java Menu -cs <opcion> <rutaArchivo> <clave>    ----");
+            System.out.println("");
+            System.out.println("<opcion>");
+            System.out.println("  -c: Cifra un archivo txt de la ruta especificada");
+            System.out.println("  -d: Descifra un archivo txt de la ruta especificada");
+            System.out.println("");
+            System.out.println("  <rutaArchivo>: Ruta del archivo a procesar");
+            System.out.println("  <clave>: Letra mayuscula entre la A y Z que indica el valor del desplazamiento");
+            System.out.println("");
+            System.out.println("Los archivos se crearan con el nombre <nombreArchivo>.cif o <nombreArchivo>.dec segun la opcion elegida");
+            System.out.println("");
+
+    }    
+}
+
+
+class MetodosDiceware {
+    
+    public void dicewareAutomatico(String cantidad){//Inicia metodo donde se ejecuta el Diceware automatico
+
+        MetodosDiceware m = new MetodosDiceware();//se instancia la clase para usar otros metodos de la misma
+        String password="";
+
+	int cant=m.validaCantidad(cantidad);//se valida la cantidad de palabras para la contrasena
+
+        String [] numeros = new String [cant];//se crea un arreglo de numeros con la cantidad validada
+        String [] palabras = new String [cant];//se crea un un arreglo de palabras con la cantidad validada
+                    
+        for (int k=0; k<numeros.length; k++){//se inicia a llenar el arreglo de numeros
+            numeros[k]=m.numeroAleatorio();//por cada posicion del arreglo se ubica un numero compuesto de cinco digitos
+        }
+
+        for (int j=0; j<numeros.length; j++){//se inicia a llenar el arreglo de palabras
+	    //por cada posicion del arreglo se ubica la palabra correspondiente al numero de cinco digitos
+            palabras[j]=m.leerDicewareTxt("/DICEWARE.txt", numeros[j]);
+            password+=palabras[j];//se crea la contrasena con las palabras
+        }
+	//se imprimen los resultados del proceso
+        System.out.println("");
+        System.out.println("GENERADOR DE CONTRASENAS DICEWARE");
+
+        for(int x=0; x<numeros.length; x++){
+            System.out.println(numeros[x]+" --> "+palabras[x]);
+        }
+
+        System.out.println("clave: "+password.replaceAll("\\s", ""));//se quitan posibles espacios en la contrasena generada y se muestra
+        System.out.println("");
+            
+    }
+
+    //Inicia metodo donde se ejecuta el Diceware manual
+    public void dicewareManual(String arg2, String arg3, String arg4, String arg5, String arg6, String arg7) {
+
+	MetodosDiceware m = new MetodosDiceware();//se instancia la clase para usar otros metodos de la misma
+        String password="";
+        String [] numeros = new String [6];
+        String [] palabras = new String [6];
+        
+        numeros[0]=arg2;//se inicia a llenar el arreglo de numeros con los 6 numeros del usuario
+        numeros[1]=arg3;
+        numeros[2]=arg4;
+        numeros[3]=arg5;
+        numeros[4]=arg6;
+        numeros[5]=arg7;
+
+	//se valida que los 6 numeros no contengan caracteres no permitidos
+        m.validaNumeros(numeros[0], numeros[1], numeros[2], numeros[3], numeros[4], numeros[5]);
+
+        for (int j=0; j<numeros.length; j++){//se recorre el arreglo de los numeros
+	    //por cada posicion del arreglo se ubica la palabra correspondiente al numero de cinco digitos
+            palabras[j]=m.leerDicewareTxt("/DICEWARE.txt", numeros[j]);
+            password+=palabras[j];//se crea la contrasena con las palabras
+        }
+	//se imprimen los resultados del proceso
+        System.out.println("");
+        System.out.println("GENERADOR DE CONTRASENAS DICEWARE");
+
+        for(int x=0; x<numeros.length; x++){
+
+            System.out.println(numeros[x]+" --> "+palabras[x]);
+
+        }
+            System.out.println("clave: "+password.replaceAll("\\s", ""));//se quitan posibles espacios en la contrasena generada y se muestra
+            System.out.println("");
+      
+    }
+
+    public int validaCantidad(String cantidad){//Inicia metodo donde se valida la cantidad de palabras para la contrasena
+	
+	int cant=0;
+
+        try {
+
+	    cant=Integer.parseInt(cantidad);//se pasa la cantidad a un numero entero
+            
+        }catch (Exception e){
+	    //si la cantidad no es un numero se muestra el error y se finaliza la ejecucion
+            System.err.println("**Error > El numero ingresado de cantidad de palabras contiene caracteres no permitidos**");
+            System.exit(0);
+        }
+
+        if(cant < 5||cant > 10){
+	    //si la cantidad de palabras no es permitida se muestra el error y se finaliza la ejecucion
+            System.err.println("**Error > Cantidad de palabras no valida, maximo 10 palabras y minimo 5**");
+            System.exit(0);
+        }
+	
+	return cant;
+
+    }
+    
+    public String numeroAleatorio (){//Inicia metodo donde se realiza la creacion de los numeros aleatorios para el modo automatico
+    
+        String unido="";
+        
+        for(int i=0; i<5; i++){//se ejecuta el ciclo hasta que el numero sea de 5 digitos
+            
+           unido+=String.valueOf((int)(Math.random()*6) + 1);//se crea un numero aleatorio entre 1 y 6 cada vez que se ejecuta
+            //se une cada digito creado en la variable "unido"
+        }
+
+        return unido;//se retorna el numero de 5 digitos creado
+    }
+    
+    public String leerDicewareTxt (String direccion, String numero){//Inicia metodo donde se lee la lista Diceware
+        
+        String texto="";
+        
+        try {
+            BufferedReader bf = new BufferedReader (new FileReader(direccion));
+            String bfRead="";
+
+            while ((bfRead = bf.readLine())!=null){//hasta leer la ultima linea de la lista
+                
+                if(bfRead.contains(numero)){//si la linea leida incluye el numero buscado
+                    texto=bfRead.substring(6);//se asigna la linea sin el numero, solo la palabra de la lista 
+		    break; 
+                    
+                }
+            }
+            
+        }catch (Exception e){//en caso de no encontrar la lista Diceware se indica un mensaje de error y se finaliza la ejecucion
+            System.err.println("**Error > No se encontro el archivo DICEWARE.txt, recuerde copiarlo a la ruta raiz con el comando -> cp DICEWARE.txt /DICEWARE.txt**");
+            System.exit(0);
+        }
+        return texto;
+    }
+    
+    //Inicia metodo donde se validan los 6 numeros digitados por el usuario
+    public void validaNumeros(String num1, String num2, String num3, String num4, String num5, String num6){
+            
+            try {
+
+                Integer.parseInt(num1);//se valida cada numero digitado por el usuario
+                Integer.parseInt(num2);
+                Integer.parseInt(num3);
+                Integer.parseInt(num4);
+                Integer.parseInt(num5);
+                Integer.parseInt(num6);
+
+            } catch (NumberFormatException e) {//en caso de error se muestra el mensaje y se finaliza la ejecucion
+                System.out.println("**Error > Caracteres no permitidos en los numeros**");
+                System.exit(0);
+            }
+
+            String unido=num1+num2+num3+num4+num5+num6;//se guarda los numeros digitados por el usuario en una sola variable
+
+            boolean resultado1=unido.contains("9");//se valida que los numeros unidos no contengan el numero 0,7,8,9
+            boolean resultado2=unido.contains("8");
+            boolean resultado3=unido.contains("7");
+            boolean resultado4=unido.contains("0");
+
+            if(resultado1||resultado2||resultado3||resultado4||num1.length()<5||num1.length()>5||num2.length()<5||num2.length()>5||num3.length()<5||num3.length()>5||num4.length()<5||num4.length()>5||num5.length()<5||num5.length()>5||num6.length()<5||num6.length()>5){
+	    //se indica el mensaje de error si los numeros contienen el 0,7,8,9 o si la cantidad de digitos por numero no es igual a 5
+                System.out.println("**Error > Los numeros solo deben incluir como maximo el numero 6 y como minimo el numero 1, ademas estar compuestos de 5 digitos**");
+                System.exit(0);
+            }
+            
+    }
+        
+    public void dicewareMensaje(){
+	        //se muestran las opciones de Diceware si el usuario lo solicita
+                System.out.println("");
+                System.out.println("OPCIONES GENERADOR DE CONTRASENAS DICEWARE");
+                System.out.println("Sintaxis para generar contrasenas con Diceware:");
+                System.out.println("----  java Menu -d <opcion> <cantidad>  ----");
+                System.out.println("----  java Menu -d <opcion> [numero1] [numero2] [numero3] [numero4] [numero5] [numero6]  ----");
+                System.out.println("");
+                System.out.println("<opcion>");
+                System.out.println("  -a (Modo automatico): Genera una contrasena de 5 a 10 palabras, con numeros "
+                        + "aleatorios generados por el programa. Debe indicar la cantidad.");
+                System.out.println("  Ejemplo: java Menu -d -a 5 : Genera una contrasena de 5 palabras");
+                System.out.println("");
+                System.out.println("  -m (Modo manual): Genera una contrasena de 6 palabras, con 6 numeros "
+                        + "ingresados por el usuario.");
+                System.out.println("  Ejemplo: java Menu -d -m 31564 53631 52161 43125 61523 26431");
+                System.out.println("");
+                System.out.println("<cantidad>: Debe indicar la cantidad de palabras para la contrasena en el modo automatico");
+                System.out.println("");
+    }    
+}
